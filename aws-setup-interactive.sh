@@ -5,14 +5,22 @@
 echo "AWS Security Hub Setup - Interactive Mode"
 echo "=========================================="
 echo ""
+echo "This script will help you set up AWS Security Hub for Sahl monitoring."
+echo "You'll need your 12-digit AWS Account ID and preferred AWS region."
+echo ""
 
 # Prompt for Account ID
 while true; do
     read -p "Enter your AWS Account ID (12 digits): " ACCOUNT_ID
-    if [[ $ACCOUNT_ID =~ ^[0-9]{12}$ ]]; then
+    # Remove any whitespace
+    ACCOUNT_ID=$(echo "$ACCOUNT_ID" | tr -d '[:space:]')
+    # Check if it's exactly 12 digits
+    if [[ ${#ACCOUNT_ID} -eq 12 ]] && [[ $ACCOUNT_ID =~ ^[0-9]+$ ]]; then
+        echo "Valid Account ID: $ACCOUNT_ID"
         break
     else
-        echo "ERROR: AWS Account ID must be exactly 12 digits. Please try again."
+        echo "ERROR: AWS Account ID must be exactly 12 digits (you entered: '$ACCOUNT_ID' with ${#ACCOUNT_ID} characters). Please try again."
+        echo "Example: 123456789012"
     fi
 done
 
@@ -28,10 +36,14 @@ echo ""
 
 while true; do
     read -p "Enter the AWS Region: " AWS_REGION
-    if [[ -n "$AWS_REGION" ]]; then
+    # Remove any whitespace
+    AWS_REGION=$(echo "$AWS_REGION" | tr -d '[:space:]')
+    if [[ -n "$AWS_REGION" ]] && [[ ${#AWS_REGION} -ge 8 ]]; then
+        echo "Using region: $AWS_REGION"
         break
     else
-        echo "ERROR: AWS Region cannot be empty. Please try again."
+        echo "ERROR: AWS Region cannot be empty and should be at least 8 characters (you entered: '$AWS_REGION'). Please try again."
+        echo "Example: us-east-1 or eu-north-1"
     fi
 done
 
