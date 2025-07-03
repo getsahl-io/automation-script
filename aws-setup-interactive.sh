@@ -9,9 +9,29 @@ echo "This script will help you set up AWS Security Hub for Sahl monitoring."
 echo "You'll need your 12-digit AWS Account ID and preferred AWS region."
 echo ""
 
+# Check if we can read from terminal
+if [ ! -t 0 ]; then
+    echo "ERROR: This script requires interactive input but is being run in non-interactive mode."
+    echo ""
+    echo "Please use one of these methods instead:"
+    echo ""
+    echo "1. Download and run locally:"
+    echo "   curl -o aws-setup-interactive.sh https://raw.githubusercontent.com/getsahl-io/automation-script/refs/heads/main/aws-setup-interactive.sh"
+    echo "   chmod +x aws-setup-interactive.sh"
+    echo "   ./aws-setup-interactive.sh"
+    echo ""
+    echo "2. Use the direct method with parameters:"
+    echo "   curl -sSL https://raw.githubusercontent.com/getsahl-io/automation-script/refs/heads/main/aws-service-account-setup.sh | bash -s YOUR_ACCOUNT_ID YOUR_REGION"
+    echo ""
+    echo "   Example:"
+    echo "   curl -sSL https://raw.githubusercontent.com/getsahl-io/automation-script/refs/heads/main/aws-service-account-setup.sh | bash -s 040745305102 eu-north-1"
+    echo ""
+    exit 1
+fi
+
 # Prompt for Account ID
 while true; do
-    read -p "Enter your AWS Account ID (12 digits): " ACCOUNT_ID
+    read -p "Enter your AWS Account ID (12 digits): " ACCOUNT_ID </dev/tty
     # Remove any whitespace
     ACCOUNT_ID=$(echo "$ACCOUNT_ID" | tr -d '[:space:]')
     # Check if it's exactly 12 digits
@@ -35,7 +55,7 @@ echo "  ap-southeast-1 (Asia Pacific - Singapore)"
 echo ""
 
 while true; do
-    read -p "Enter the AWS Region: " AWS_REGION
+    read -p "Enter the AWS Region: " AWS_REGION </dev/tty
     # Remove any whitespace
     AWS_REGION=$(echo "$AWS_REGION" | tr -d '[:space:]')
     if [[ -n "$AWS_REGION" ]] && [[ ${#AWS_REGION} -ge 8 ]]; then
