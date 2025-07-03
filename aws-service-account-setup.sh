@@ -18,9 +18,35 @@ fi
 AWS_VERSION=$(aws --version 2>&1)
 echo "Found AWS CLI: $AWS_VERSION"
 
-# Prompt for required variables
-read -p "Enter your AWS Account ID: " ACCOUNT_ID
-read -p "Enter the AWS Region (e.g., us-east-1): " AWS_REGION
+# Get Account ID and Region from command line arguments or prompt
+if [ -n "$1" ] && [ -n "$2" ]; then
+    # Arguments provided via command line
+    ACCOUNT_ID="$1"
+    AWS_REGION="$2"
+    echo "Using provided Account ID: $ACCOUNT_ID"
+    echo "Using provided Region: $AWS_REGION"
+elif [ -t 0 ]; then
+    # Interactive mode - terminal is available
+    read -p "Enter your AWS Account ID: " ACCOUNT_ID
+    read -p "Enter the AWS Region (e.g., us-east-1): " AWS_REGION
+else
+    # Non-interactive mode (piped input) - show usage
+    echo ""
+    echo "Usage for non-interactive mode:"
+    echo "curl -sSL https://raw.githubusercontent.com/getsahl-io/automation-script/refs/heads/main/aws-service-account-setup.sh | bash -s ACCOUNT_ID REGION"
+    echo ""
+    echo "Example:"
+    echo "curl -sSL https://raw.githubusercontent.com/getsahl-io/automation-script/refs/heads/main/aws-service-account-setup.sh | bash -s 123456789012 us-east-1"
+    echo ""
+    echo "Or download and run interactively:"
+    echo "curl -o aws-setup.sh https://raw.githubusercontent.com/getsahl-io/automation-script/refs/heads/main/aws-service-account-setup.sh"
+    echo "chmod +x aws-setup.sh"
+    echo "./aws-setup.sh"
+    echo ""
+    echo "Press any key to exit..."
+    read -n 1 2>/dev/null || true
+    exit 1
+fi
 
 # Validate inputs
 if [[ ! $ACCOUNT_ID =~ ^[0-9]{12}$ ]]; then
