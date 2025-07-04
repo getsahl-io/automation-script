@@ -87,23 +87,40 @@ aws iam attach-role-policy --role-name "$ROLE_NAME" --policy-arn "$POLICY_ARN"
 # Get the Role ARN
 ROLE_ARN=$(aws iam get-role --role-name "$ROLE_NAME" --query Role.Arn --output text)
 
-# Save details to file
+# Save details to JSON file
 echo "=================================================="
 echo "Setup completed successfully!"
 echo "=================================================="
 echo "Role ARN: $ROLE_ARN"
 echo ""
 
-# Save to file
-echo "Service Account Details" > ~/aws-security-hub-details.txt
-echo "------------------------" >> ~/aws-security-hub-details.txt
-echo "Role Name: $ROLE_NAME" >> ~/aws-security-hub-details.txt
-echo "Role ARN: $ROLE_ARN" >> ~/aws-security-hub-details.txt
-echo "Policy Name: $POLICY_NAME" >> ~/aws-security-hub-details.txt
-echo "Policy ARN: $POLICY_ARN" >> ~/aws-security-hub-details.txt
-echo "AWS Account ID: $ACCOUNT_ID" >> ~/aws-security-hub-details.txt
-echo "Region: $AWS_REGION" >> ~/aws-security-hub-details.txt
-echo "Created on: $(date)" >> ~/aws-security-hub-details.txt
+# Create JSON file with service account details
+cat > ~/aws-service-account-credentials.json << EOF
+{
+  "roleName": "$ROLE_NAME",
+  "roleArn": "$ROLE_ARN",
+  "policyName": "$POLICY_NAME",
+  "policyArn": "$POLICY_ARN",
+  "accountId": "$ACCOUNT_ID",
+  "region": "$AWS_REGION",
+  "createdOn": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "permissions": [
+    "iam:ListUsers",
+    "iam:ListAccessKeys",
+    "iam:ListMFADevices",
+    "iam:GetAccountSummary",
+    "s3:ListBuckets",
+    "s3:GetBucketPolicyStatus",
+    "s3:GetBucketEncryption",
+    "cloudtrail:DescribeTrails",
+    "cloudtrail:GetEventSelectors",
+    "ec2:DescribeSecurityGroups",
+    "config:GetComplianceSummaryByConfigRule",
+    "securityhub:GetFindings"
+  ],
+  "description": "AWS Security Hub service account credentials for Sahl security monitoring application"
+}
+EOF
 
 echo "Permissions granted:"
 echo "- IAM: ListUsers, ListAccessKeys, ListMFADevices, GetAccountSummary"
@@ -113,8 +130,12 @@ echo "- EC2: DescribeSecurityGroups"
 echo "- Config: GetComplianceSummaryByConfigRule"
 echo "- Security Hub: GetFindings"
 echo ""
-echo "Details saved to ~/aws-security-hub-details.txt"
+echo "Credentials saved to ~/aws-service-account-credentials.json"
 echo ""
-echo "IMPORTANT: Copy this Role ARN for your Sahl application:"
-echo "$ROLE_ARN"
+echo "IMPORTANT: Download the JSON file using Cloud Shell's download feature:"
+echo "1. Use the three-dot menu (⋮) in Cloud Shell"
+echo "2. Select 'Download file'"
+echo "3. Enter: aws-service-account-credentials.json"
+echo ""
+echo "Role ARN: $ROLE_ARN"
 echo ""
