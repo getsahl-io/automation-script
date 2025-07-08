@@ -31,7 +31,7 @@ echo "Using policy name: $POLICY_NAME"
 echo "Enabling AWS Security Hub..."
 aws securityhub enable-security-hub 2>/dev/null || echo "Security Hub may already be enabled"
 
-# Create custom IAM policy with the required permissions
+# Create custom IAM policy with the required permissions (corrected)
 echo "Creating custom IAM policy with required permissions..."
 aws iam create-policy --policy-name "$POLICY_NAME" --policy-document '{
     "Version": "2012-10-17",
@@ -43,7 +43,7 @@ aws iam create-policy --policy-name "$POLICY_NAME" --policy-document '{
                 "iam:ListAccessKeys",
                 "iam:ListMFADevices",
                 "iam:GetAccountSummary",
-                "s3:ListBuckets",
+                "s3:ListAllMyBuckets",
                 "s3:GetBucketPolicyStatus",
                 "s3:GetBucketEncryption",
                 "cloudtrail:DescribeTrails",
@@ -123,7 +123,7 @@ cat > ~/aws-service-account-credentials.json << EOF
     "iam:ListAccessKeys",
     "iam:ListMFADevices",
     "iam:GetAccountSummary",
-    "s3:ListBuckets",
+    "s3:ListAllMyBuckets",
     "s3:GetBucketPolicyStatus",
     "s3:GetBucketEncryption",
     "cloudtrail:DescribeTrails",
@@ -138,7 +138,7 @@ EOF
 
 echo "Permissions granted:"
 echo "- IAM: ListUsers, ListAccessKeys, ListMFADevices, GetAccountSummary"
-echo "- S3: ListBuckets, GetBucketPolicyStatus, GetBucketEncryption"
+echo "- S3: ListAllMyBuckets, GetBucketPolicyStatus, GetBucketEncryption"
 echo "- CloudTrail: DescribeTrails, GetEventSelectors"
 echo "- EC2: DescribeSecurityGroups"
 echo "- Config: GetComplianceSummaryByConfigRule"
@@ -162,3 +162,8 @@ echo "User ARN: $USER_ARN"
 echo ""
 echo "⚠️  SECURITY REMINDER:"
 echo "The JSON file contains sensitive access keys. Store it securely!"
+echo ""
+echo "🔧 TESTING PERMISSIONS:"
+echo "You can now test these credentials in the Sahl application."
+echo "If any permissions are still missing, check the AWS IAM console to ensure"
+echo "the policy was attached correctly to the user: $USER_NAME"
