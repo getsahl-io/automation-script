@@ -55,6 +55,25 @@ az role assignment create \
 echo "⏳ Waiting for role assignments to propagate..."
 sleep 30
 
+# Create JSON configuration file
+CONFIG_FILE="azure-service-account-credentials.json"
+cat > $CONFIG_FILE << EOF
+{
+  "tenantId": "$TENANT_ID",
+  "clientId": "$CLIENT_ID",
+  "clientSecret": "$CLIENT_SECRET",
+  "subscriptionId": "$SUBSCRIPTION_ID",
+  "createdOn": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "permissions": [
+    "Reader",
+    "Security Reader", 
+    "Storage Blob Data Reader",
+    "Key Vault Reader",
+    "Monitoring Reader"
+  ]
+}
+EOF
+
 echo ""
 echo "🎉 Setup completed successfully!"
 echo ""
@@ -66,6 +85,7 @@ echo "Client Secret: $CLIENT_SECRET"
 echo "Subscription:  $SUBSCRIPTION_ID"
 echo "================================"
 echo ""
+echo "💾 Configuration saved to: $CONFIG_FILE"
 echo "⚠️  IMPORTANT: Save these credentials securely!"
 echo "💡 Use these credentials in your application's Azure integration setup."
 echo ""
@@ -75,3 +95,8 @@ echo "   - Security Reader (subscription level)"
 echo "   - Storage Blob Data Reader (subscription level)"
 echo "   - Key Vault Reader (subscription level)"
 echo "   - Monitoring Reader (subscription level)"
+echo ""
+echo "📋 Next Steps:"
+echo "   1. Download the configuration file: cat $CONFIG_FILE"
+echo "   2. Copy the content and save it locally"
+echo "   3. Upload it to your application in Step 3"
