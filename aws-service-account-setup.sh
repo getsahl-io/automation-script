@@ -1,6 +1,7 @@
 #!/bin/bash
 # AWS Security Hub Setup Script - Access Keys Version
 # Creates an IAM user with access keys and specific read-only permissions
+# Includes AWS Config permissions for Security compliance tests and Asset Register
 
 export AWS_PAGER=""
 
@@ -36,32 +37,32 @@ aws securityhub enable-security-hub 2>/dev/null || echo "Security Hub may alread
 # Create custom IAM policy with the required permissions (corrected)
 echo "Creating custom IAM policy with required permissions..."
 aws iam create-policy --policy-name "$POLICY_NAME" --policy-document '{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "iam:ListUsers",
-                "iam:ListAccessKeys",
-                "iam:ListMFADevices",
-                "iam:GetAccountSummary",
-                "s3:ListAllMyBuckets",
-                "s3:GetBucketPolicyStatus",
-                "s3:GetBucketEncryption",
-                "cloudtrail:DescribeTrails",
-                "cloudtrail:GetEventSelectors",
-                "ec2:DescribeSecurityGroups",
-                "config:GetComplianceSummaryByConfigRule",
-                "config:ListDiscoveredResources",
-                "config:BatchGetResourceConfig",
-                "config:DescribeConfigurationRecorders",
-                "config:DescribeConfigurationRecorderStatus",
-                "securityhub:GetFindings"
-            ],
-            "Resource": "*"
-        }
-    ]
-}' --description "Read-only permissions for Sahl security monitoring application"
+ "Version": "2012-10-17",
+ "Statement": [
+ {
+ "Effect": "Allow",
+ "Action": [
+ "iam:ListUsers",
+ "iam:ListAccessKeys",
+ "iam:ListMFADevices",
+ "iam:GetAccountSummary",
+ "s3:ListAllMyBuckets",
+ "s3:GetBucketPolicyStatus",
+ "s3:GetBucketEncryption",
+ "cloudtrail:DescribeTrails",
+ "cloudtrail:GetEventSelectors",
+ "ec2:DescribeSecurityGroups",
+ "config:GetComplianceSummaryByConfigRule",
+ "config:ListDiscoveredResources",
+ "config:BatchGetResourceConfig",
+ "config:DescribeConfigurationRecorders",
+ "config:DescribeConfigurationRecorderStatus",
+ "securityhub:GetFindings"
+ ],
+ "Resource": "*"
+ }
+ ]
+}' --description "Read-only permissions for Sahl security monitoring and Asset Register (AWS Config)"
 
 # Get the Policy ARN
 POLICY_ARN="arn:aws:iam::$ACCOUNT_ID:policy/$POLICY_NAME"
@@ -85,22 +86,21 @@ SECRET_ACCESS_KEY=$(echo "$ACCESS_KEY_OUTPUT" | grep -o '"SecretAccessKey": "[^"
 # Get the User ARN
 USER_ARN=$(aws iam get-user --user-name "$USER_NAME" --query User.Arn --output text)
 
-# Verify the access keys work by testing them
+# Test the credentials with a simple API call
 echo "Testing access keys..."
 export AWS_ACCESS_KEY_ID="$ACCESS_KEY_ID"
 export AWS_SECRET_ACCESS_KEY="$SECRET_ACCESS_KEY"
 export AWS_DEFAULT_REGION="$AWS_REGION"
 
-# Test the credentials with a simple API call
 TEST_RESULT=$(aws sts get-caller-identity 2>/dev/null)
 if [ $? -eq 0 ]; then
-    echo "✅ Access keys verified successfully!"
-    TEST_ACCOUNT_ID=$(echo "$TEST_RESULT" | grep -o '"Account": "[^"]*"' | cut -d'"' -f4)
-    TEST_USER_ID=$(echo "$TEST_RESULT" | grep -o '"UserId": "[^"]*"' | cut -d'"' -f4)
-    echo "Verified Account ID: $TEST_ACCOUNT_ID"
-    echo "User ID: $TEST_USER_ID"
+ echo "✅ Access keys verified successfully!"
+ TEST_ACCOUNT_ID=$(echo "$TEST_RESULT" | grep -o '"Account": "[^"]*"' | cut -d'"' -f4)
+ TEST_USER_ID=$(echo "$TEST_RESULT" | grep -o '"UserId": "[^"]*"' | cut -d'"' -f4)
+ echo "Verified Account ID: $TEST_ACCOUNT_ID"
+ echo "User ID: $TEST_USER_ID"
 else
-    echo "⚠️  Warning: Could not verify access keys immediately. They may need a few seconds to propagate."
+ echo "⚠️ Warning: Could not verify access keys immediately. They may need a few seconds to propagate."
 fi
 
 # Save details to JSON file
@@ -112,37 +112,37 @@ echo "Access Key ID: $ACCESS_KEY_ID"
 echo "Secret Access Key: [HIDDEN FOR SECURITY]"
 echo ""
 
-# Create JSON file with service account details
 cat > ~/aws-service-account-credentials.json << EOF
 {
-  "userName": "$USER_NAME",
-  "userArn": "$USER_ARN",
-  "policyName": "$POLICY_NAME",
-  "policyArn": "$POLICY_ARN",
-  "accountId": "$ACCOUNT_ID",
-  "region": "$AWS_REGION",
-  "accessKeyId": "$ACCESS_KEY_ID",
-  "secretAccessKey": "$SECRET_ACCESS_KEY",
-  "createdOn": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-  "permissions": [
-    "iam:ListUsers",
-    "iam:ListAccessKeys",
-    "iam:ListMFADevices",
-    "iam:GetAccountSummary",
-    "s3:ListAllMyBuckets",
-    "s3:GetBucketPolicyStatus",
-    "s3:GetBucketEncryption",
-    "cloudtrail:DescribeTrails",
-    "cloudtrail:GetEventSelectors",
-    "ec2:DescribeSecurityGroups",
-    "config:GetComplianceSummaryByConfigRule",
-    "config:ListDiscoveredResources",
-    "config:BatchGetResourceConfig",
-    "config:DescribeConfigurationRecorders",
-    "config:DescribeConfigurationRecorderStatus",
-    "securityhub:GetFindings"
-  ],
-  "description": "AWS Security Hub service account credentials for Sahl security monitoring application"
+ "userName": "$USER_NAME",
+ "userArn": "$USER_ARN",
+ "policyName": "$POLICY_NAME",
+ "policyArn": "$POLICY_ARN",
+ "accountId": "$ACCOUNT_ID",
+ "region": "$AWS_REGION",
+ "accessKeyId": "$ACCESS_KEY_ID",
+ "secretAccessKey": "$SECRET_ACCESS_KEY",
+ "createdOn": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+ "permissions": [
+ "iam:ListUsers",
+ "iam:ListAccessKeys",
+ "iam:ListMFADevices",
+ "iam:GetAccountSummary",
+ "s3:ListAllMyBuckets",
+ "s3:GetBucketPolicyStatus",
+ "s3:GetBucketEncryption",
+ "cloudtrail:DescribeTrails",
+ "cloudtrail:GetEventSelectors",
+ "ec2:DescribeSecurityGroups",
+ "config:GetComplianceSummaryByConfigRule",
+ "config:ListDiscoveredResources",
+ "config:BatchGetResourceConfig",
+ "config:DescribeConfigurationRecorders",
+ "config:DescribeConfigurationRecorderStatus",
+ "securityhub:GetFindings"
+ ],
+ "description": "AWS Security Hub service account credentials for Sahl security monitoring and Asset Register (AWS Config resource import)",
+ "assetRegisterNote": "IAM permissions for Config are included. You must also enable AWS Config and ensure the configuration recorder is recording in this account/region."
 }
 EOF
 
@@ -154,11 +154,16 @@ echo "- EC2: DescribeSecurityGroups"
 echo "- Config: GetComplianceSummaryByConfigRule, ListDiscoveredResources, BatchGetResourceConfig, DescribeConfigurationRecorders, DescribeConfigurationRecorderStatus"
 echo "- Security Hub: GetFindings"
 echo ""
+echo "📦 Asset Register (AWS Config):"
+echo "- This script grants IAM permissions to list and read Config-discovered resources."
+echo "- AWS Config must also be ENABLED with an active configuration recorder in $AWS_REGION."
+echo "- If Config is not enabled, connect the integration but use the AWS Console to turn on Config:"
+echo "  https://docs.aws.amazon.com/config/latest/developerguide/getting-started.html"
+echo ""
 echo "🔐 SECURITY IMPORTANT:"
 echo "- Access keys are saved in the JSON file"
 echo "- Keep this file secure and do not share it publicly"
 echo "- Consider rotating these keys regularly (every 90 days)"
-echo "- You can delete this user from AWS IAM console when no longer needed"
 echo ""
 echo "Credentials saved to ~/aws-service-account-credentials.json"
 echo ""
@@ -169,11 +174,3 @@ echo "3. Enter: aws-service-account-credentials.json"
 echo ""
 echo "Access Key ID: $ACCESS_KEY_ID"
 echo "User ARN: $USER_ARN"
-echo ""
-echo "⚠️  SECURITY REMINDER:"
-echo "The JSON file contains sensitive access keys. Store it securely!"
-echo ""
-echo "🔧 TESTING PERMISSIONS:"
-echo "You can now test these credentials in the Sahl application."
-echo "If any permissions are still missing, check the AWS IAM console to ensure"
-echo "the policy was attached correctly to the user: $USER_NAME"
