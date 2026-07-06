@@ -8,9 +8,51 @@ set -e
 
 echo "🚀 Starting Azure Service Principal Setup..."
 
+# ------------------------------------------------------------
+# Authentication Preflight
+# ------------------------------------------------------------
+# Cloud Shell sessions are sometimes still initializing (or the ARM token has
+# expired) when this script is run, which causes `az account show` to fail
+# with "Please run 'az login' to setup account." Detect that case and try to
+# recover automatically before giving up.
+test_auth() {
+  az account show --query id -o tsv &>/dev/null
+  return $?
+}
+
+if ! test_auth; then
+  echo "⚠️  No active Azure session detected. Attempting to authenticate..."
+
+  if az login --scope 74658136-14ec-4630-ad9b-26e160ff0fc6/.default --only-show-errors &>/dev/null; then
+    echo "✅ Authenticated using the Cloud Shell ARM scope"
+  elif az login --only-show-errors &>/dev/null; then
+    echo "✅ Authenticated via az login"
+  else
+    echo "❌ Authentication failed."
+    echo "🔧 Please run 'az login' manually in this Cloud Shell session, then re-run this script:"
+    echo "   az login"
+    echo "   ./Azure-setup.sh"
+    exit 1
+  fi
+fi
+
 # Get subscription ID and tenant ID
-SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-TENANT_ID=$(az account show --query tenantId -o tsv)
+SUBSCRIPTION_ID=$(az account show --query id -o tsv 2>/dev/null || echo "")
+TENANT_ID=$(az account show --query tenantId -o tsv 2>/dev/null || echo "")
+
+if [ -z "$SUBSCRIPTION_ID" ] || [ -z "$TENANT_ID" ]; then
+  echo "❌ No active Azure subscription found."
+  echo "📋 Available subscriptions:"
+  az account list -o table
+  echo ""
+  echo "🔧 Select one and re-run this script:"
+  echo "   az account set --subscription \"<subscription-name-or-id>\""
+  echo "   ./Azure-setup.sh"
+  exit 1
+fi
+
+CURRENT_USER=$(az account show --query user.name -o tsv 2>/dev/null || echo "unknown")
+echo "✅ Authenticated as: $CURRENT_USER"
 echo "📋 Using subscription: $SUBSCRIPTION_ID"
 echo "🏢 Using tenant: $TENANT_ID"
 
@@ -94,19 +136,22 @@ echo "⏳ Waiting for permissions to propagate..."
 sleep 60
 
 echo "🧪 Testing service principal permissions..."
-az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID > /dev/null 2>&1
+# Use an isolated CLI config directory for this test so the service principal
+# login does not replace your signed-in Cloud Shell session.
+SP_TEST_CONFIG_DIR=$(mktemp -d)
+if AZURE_CONFIG_DIR="$SP_TEST_CONFIG_DIR" az login --service-principal -u $CLIENT_ID -p $CLIENT_SECRET --tenant $TENANT_ID --only-show-errors > /dev/null 2>&1; then
+ echo "🔍 Testing Microsoft Graph access..."
+ ACCESS_TOKEN=$(AZURE_CONFIG_DIR="$SP_TEST_CONFIG_DIR" az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv 2>/dev/null)
 
-echo "🔍 Testing Microsoft Graph access..."
-ACCESS_TOKEN=$(az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv)
-
-if [ ! -z "$ACCESS_TOKEN" ]; then
+ if [ ! -z "$ACCESS_TOKEN" ]; then
  echo "✅ Microsoft Graph access token obtained successfully!"
-else
+ else
  echo "❌ Failed to obtain Microsoft Graph access token"
+ fi
+else
+ echo "⚠️ Could not verify service principal login yet — permissions may still be propagating. This does not affect the credentials below."
 fi
-
-az logout > /dev/null 2>&1
-az login > /dev/null 2>&1
+rm -rf "$SP_TEST_CONFIG_DIR"
 
 CONFIG_FILE="azure-service-account-credentials.json"
 cat > $CONFIG_FILE << EOF
